@@ -78,6 +78,20 @@ class GameObject:
             "Метод draw() должен быть переопределён в подклассе"
         )
 
+    def draw_cell(self, position: Position, color: RGBColor | None = None,
+                  border: bool = True) -> None:
+        """Рисует одну клетку сетки.
+
+        Args:
+            position: Позиция объекта на игровом поле.
+            color: Цвет объекта в формате RGB.
+            border: Граница объекта
+        """
+        rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
+        pygame.draw.rect(screen, color or self.body_color, rect)
+        if border:
+            pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+
 
 class Apple(GameObject):
     """Представляет яблоко на игровом поле."""
@@ -127,9 +141,7 @@ class Apple(GameObject):
 
     def draw(self) -> None:
         """Отрисовывает яблоко и его границы."""
-        rect = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
-        pygame.draw.rect(screen, self.body_color, rect)
-        pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+        self.draw_cell(self.position)
 
 
 class Snake(GameObject):
@@ -149,8 +161,10 @@ class Snake(GameObject):
         """
         self.positions: list[Position] = [self.position]
         self.length: int = len(self.positions)
+
         if direction is None:
             direction = choice((UP, DOWN, LEFT, RIGHT))
+
         self.direction: Direction = direction
         self.next_direction: Direction | None = None
         self.last: Position | None = None
@@ -183,14 +197,14 @@ class Snake(GameObject):
         """
         self.update_direction()
         self.last = None
+
         head_x, head_y = self.get_head_position()
         dx, dy = self.direction
 
-        new_head_x, new_head_y = ((head_x + dx * GRID_SIZE) % SCREEN_WIDTH,
-                                  (head_y + dy
-                                   * GRID_SIZE) % SCREEN_HEIGHT)
+        new_head = ((head_x + dx * GRID_SIZE) % SCREEN_WIDTH,
+                    (head_y + dy * GRID_SIZE) % SCREEN_HEIGHT)
 
-        self.positions.insert(0, (new_head_x, new_head_y))
+        self.positions.insert(0, new_head)
 
         if len(self.positions) > self.length:
             self.last = self.positions.pop()
@@ -201,14 +215,10 @@ class Snake(GameObject):
         Если хвост переместился, очищает его предыдущую позицию.
         """
         for position in self.positions:
-            rect = pygame.Rect(position, (GRID_SIZE, GRID_SIZE))
-            pygame.draw.rect(screen, self.body_color, rect)
-            pygame.draw.rect(screen, BORDER_COLOR, rect, 1)
+            self.draw_cell(position)
 
-        # Затирание последнего сегмента
         if self.last is not None:
-            last_rect = pygame.Rect(self.last, (GRID_SIZE, GRID_SIZE))
-            pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
+            self.draw_cell(self.last, BOARD_BACKGROUND_COLOR, border=False)
 
     def update_direction(self) -> None:
         """Применяет запланированное направление движения."""
@@ -279,7 +289,7 @@ def main() -> None:
     Создаёт игровые объекты, обрабатывает ввод,
     обновляет состояние игры и выполняет отрисовку.
     """
-    # Тут нужно создать экземпляры классов.
+    screen.fill(BOARD_BACKGROUND_COLOR)
     snake = Snake()
     apple = Apple()
 
