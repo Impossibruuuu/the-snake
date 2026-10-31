@@ -1,41 +1,48 @@
 from random import randint, choice
+from typing import NoReturn
 
 import pygame
+
+# Псевдонимы типов:
+type Position = tuple[int, int]
+type Direction = tuple[int, int]
+type RGBColor = tuple[int, int, int]
 
 # Инициализация PyGame:
 pygame.init()
 
 # Константы для размеров поля и сетки:
-SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
-DEFAULT_POSITION = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+SCREEN_WIDTH: int = 640
+SCREEN_HEIGHT: int = 480
+DEFAULT_POSITION: Position = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
-GRID_SIZE = 20
-GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
-GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
+GRID_SIZE: int = 20
+GRID_WIDTH: int = SCREEN_WIDTH // GRID_SIZE
+GRID_HEIGHT: int = SCREEN_HEIGHT // GRID_SIZE
 
 # Направления движения:
-UP = (0, -1)
-DOWN = (0, 1)
-LEFT = (-1, 0)
-RIGHT = (1, 0)
+UP: Direction = (0, -1)
+DOWN: Direction = (0, 1)
+LEFT: Direction = (-1, 0)
+RIGHT: Direction = (1, 0)
 
 # Цвет фона - черный:
-BOARD_BACKGROUND_COLOR = (0, 0, 0)
+BOARD_BACKGROUND_COLOR: RGBColor = (0, 0, 0)
 
 # Цвет границы ячейки
-BORDER_COLOR = (93, 216, 228)
+BORDER_COLOR: RGBColor = (93, 216, 228)
 
 # Цвет яблока
-APPLE_COLOR = (255, 0, 0)
+APPLE_COLOR: RGBColor = (255, 0, 0)
 
 # Цвет змейки
-SNAKE_COLOR = (0, 255, 0)
+SNAKE_COLOR: RGBColor = (0, 255, 0)
 
 # Цвет по умолчанию
-DEFAULT_COLOR = (255, 255, 255)
+DEFAULT_COLOR: RGBColor = (255, 255, 255)
 
 # Скорость движения змейки:
-SPEED = 20
+SPEED: int = 20
 
 # Настройка игрового окна:
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
@@ -51,38 +58,42 @@ clock = pygame.time.Clock()
 class GameObject:
     """Базовый класс игрового объекта."""
 
-    def __init__(self, position=DEFAULT_POSITION, color=DEFAULT_COLOR):
+    def __init__(self, position: Position = DEFAULT_POSITION,
+                 color: RGBColor = DEFAULT_COLOR) -> None:
         """Инициализирует игровой объект.
 
         Args:
             position: Начальная позиция объекта на игровом поле.
             color: Цвет объекта в формате RGB.
         """
-        self.position = position
-        self.body_color = color
+        self.position: Position = position
+        self.body_color: RGBColor = color
 
-    def draw(self):
+    def draw(self) -> NoReturn:
         """Отрисовывает игровой объект.
 
         Метод должен быть переопределён в дочернем классе.
         """
-        raise NotImplementedError("Метод draw() должен быть переопределён в "
-                                  "подклассе")
+        raise NotImplementedError(
+            "Метод draw() должен быть переопределён в подклассе"
+        )
 
 
 class Apple(GameObject):
     """Представляет яблоко на игровом поле."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Создаёт яблоко со случайной начальной позицией."""
         super().__init__(self.randomize_position(), APPLE_COLOR)
 
     @staticmethod
-    def randomize_position(positions=None):
+    def randomize_position(
+            positions: list[Position] | None = None
+    ) -> Position:
         """Генерирует случайную свободную позицию для яблока.
 
         Args:
-            positions: Коллекция занятых позиций.
+            positions: Список занятых позиций.
 
         Returns:
             Координаты свободной позиции (x, y).
@@ -95,15 +106,18 @@ class Apple(GameObject):
             if (x, y) not in positions:
                 return x, y
 
-    def set_new_position(self, positions=None):
+    def set_new_position(
+            self,
+            positions: list[Position] | None = None
+    ) -> None:
         """Перемещает яблоко в новую случайную позицию.
 
         Args:
-            positions: Коллекция занятых позиций.
+            positions: Список занятых позиций.
         """
         self.position = self.randomize_position(positions)
 
-    def get_position(self):
+    def get_position(self) -> Position:
         """Возвращает текущую позицию яблока.
 
         Returns:
@@ -111,7 +125,7 @@ class Apple(GameObject):
         """
         return self.position
 
-    def draw(self):
+    def draw(self) -> None:
         """Отрисовывает яблоко и его границы."""
         rect = pygame.Rect(self.position, (GRID_SIZE, GRID_SIZE))
         pygame.draw.rect(screen, self.body_color, rect)
@@ -121,27 +135,27 @@ class Apple(GameObject):
 class Snake(GameObject):
     """Представляет змейку и управляет её состоянием."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Создаёт змейку и устанавливает начальное состояние."""
         super().__init__(color=SNAKE_COLOR)
         self.reset(direction=RIGHT)
 
-    def reset(self, direction=None):
+    def reset(self, direction: Direction | None = None) -> None:
         """Сбрасывает состояние змейки.
 
         Args:
             direction: Начальное направление движения.
                 Если не задано, выбирается случайное направление.
         """
-        self.positions = [self.position]
-        self.length = len(self.positions)
+        self.positions: list[Position] = [self.position]
+        self.length: int = len(self.positions)
         if direction is None:
             direction = choice((UP, DOWN, LEFT, RIGHT))
-        self.direction = direction
-        self.next_direction = None
-        self.last = None
+        self.direction: Direction = direction
+        self.next_direction: Direction | None = None
+        self.last: Position | None = None
 
-    def get_head_position(self):
+    def get_head_position(self) -> Position:
         """Возвращает текущую позицию головы змейки.
 
         Returns:
@@ -149,7 +163,7 @@ class Snake(GameObject):
         """
         return self.positions[0]
 
-    def get_snake_positions(self):
+    def get_snake_positions(self) -> list[Position]:
         """Возвращает позиции всех сегментов змейки.
 
         Returns:
@@ -157,11 +171,11 @@ class Snake(GameObject):
         """
         return self.positions
 
-    def grow(self):
+    def grow(self) -> None:
         """Увеличивает длину змейки на один сегмент."""
         self.length += 1
 
-    def move(self):
+    def move(self) -> None:
         """Перемещает змейку на одну клетку.
 
         Обновляет направление, добавляет новую позицию головы
@@ -181,7 +195,7 @@ class Snake(GameObject):
         if len(self.positions) > self.length:
             self.last = self.positions.pop()
 
-    def draw(self):
+    def draw(self) -> None:
         """Отрисовывает все сегменты змейки.
 
         Если хвост переместился, очищает его предыдущую позицию.
@@ -196,12 +210,12 @@ class Snake(GameObject):
             last_rect = pygame.Rect(self.last, (GRID_SIZE, GRID_SIZE))
             pygame.draw.rect(screen, BOARD_BACKGROUND_COLOR, last_rect)
 
-    def update_direction(self):
+    def update_direction(self) -> None:
         """Применяет запланированное направление движения."""
         if self.next_direction is not None:
             self.direction, self.next_direction = self.next_direction, None
 
-    def collides_with_self(self):
+    def collides_with_self(self) -> bool:
         """Проверяет столкновение головы змейки с её телом.
 
         Returns:
@@ -210,7 +224,7 @@ class Snake(GameObject):
         return self.get_head_position() in self.get_snake_positions()[1:]
 
 
-def handle_keys(game_object):
+def handle_keys(game_object: Snake) -> None:
     """Обрабатывает события клавиатуры и изменение направления.
 
     Args:
@@ -231,7 +245,7 @@ def handle_keys(game_object):
                 game_object.next_direction = RIGHT
 
 
-def check_snake_self_collision(snake):
+def check_snake_self_collision(snake: Snake) -> None:
     """Проверяет столкновение змейки с самой собой.
 
     При обнаружении столкновения сбрасывает состояние змейки.
@@ -244,7 +258,7 @@ def check_snake_self_collision(snake):
         snake.reset()
 
 
-def check_apple_eating(snake, apple):
+def check_apple_eating(snake: Snake, apple: Apple) -> None:
     """Проверяет, съела ли змейка яблоко.
 
     При совпадении позиций увеличивает длину змейки
@@ -259,7 +273,7 @@ def check_apple_eating(snake, apple):
         apple.set_new_position(snake.get_snake_positions())
 
 
-def main():
+def main() -> None:
     """Запускает основной игровой цикл.
 
     Создаёт игровые объекты, обрабатывает ввод,
