@@ -41,6 +41,12 @@ SNAKE_COLOR: RGBColor = (0, 255, 0)
 # Цвет по умолчанию
 DEFAULT_COLOR: RGBColor = (255, 255, 255)
 
+# Параметры экрана паузы:
+PAUSE_TEXT: str = 'ПАУЗА'
+PAUSE_FONT_SIZE: int = 96
+PAUSE_TEXT_COLOR: RGBColor = (255, 255, 255)
+PAUSE_OVERLAY_ALPHA: int = 150
+
 # Скорость движения змейки:
 SPEED: int = 20
 
@@ -234,18 +240,70 @@ class Snake(GameObject):
         return self.get_head_position() in self.get_snake_positions()[1:]
 
 
-def handle_keys(game_object: Snake) -> None:
+class Game:
+    """Хранит состояние игры: счёт, паузу и заголовок окна."""
+
+    def __init__(self) -> None:
+        """Создаёт игру с нулевым счётом и без паузы."""
+        self.score: int = 0
+        self.paused: bool = False
+        self.update_title()
+
+    def add_point(self) -> None:
+        """Увеличивает счёт на единицу."""
+        self.score += 1
+        self.update_title()
+
+    def reset_score(self) -> None:
+        """Сбрасывает счёт."""
+        self.score = 0
+        self.update_title()
+
+    def update_title(self) -> None:
+        """Показывает текущий счёт в заголовке окна."""
+        pygame.display.set_caption(f'{WINDOW_TITLE}  |  Score: {self.score}')
+
+    def toggle_pause(self) -> None:
+        """Включает или выключает паузу."""
+        self.paused = not self.paused
+        if self.paused:
+            self.draw_pause()
+        else:
+            screen.fill(BOARD_BACKGROUND_COLOR)
+
+    @staticmethod
+    def draw_pause() -> None:
+        """Затемняет поле и выводит по центру надпись «ПАУЗА»."""
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(PAUSE_OVERLAY_ALPHA)
+        overlay.fill(BOARD_BACKGROUND_COLOR)
+        screen.blit(overlay, (0, 0))
+
+        font = pygame.font.Font(None, PAUSE_FONT_SIZE)
+        text = font.render(PAUSE_TEXT, True, PAUSE_TEXT_COLOR)
+        screen.blit(text, text.get_rect(center=SCREEN_CENTER))
+
+
+def handle_keys(game_object: Snake) -> bool:
     """Обрабатывает события клавиатуры и изменение направления.
 
     Args:
         game_object: Змейка, направление которой изменяется.
+
+    Returns:
+        True, если в этом кадре нажата клавиша паузы, иначе False.
     """
+    pause_pressed = False
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             raise SystemExit
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP and game_object.direction != DOWN:
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pause_pressed = True
+            elif event.key == pygame.K_UP and game_object.direction != DOWN:
                 game_object.next_direction = UP
             elif event.key == pygame.K_DOWN and game_object.direction != UP:
                 game_object.next_direction = DOWN
@@ -253,9 +311,8 @@ def handle_keys(game_object: Snake) -> None:
                 game_object.next_direction = LEFT
             elif event.key == pygame.K_RIGHT and game_object.direction != LEFT:
                 game_object.next_direction = RIGHT
-            elif event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                raise SystemExit
+
+    return pause_pressed
 
 
 def check_snake_self_collision(snake: Snake) -> bool:
@@ -307,26 +364,28 @@ def main() -> None:
     Создаёт игровые объекты, обрабатывает ввод,
     обновляет состояние игры и выполняет отрисовку.
     """
-    game_score: int = 0
-    update_title(game_score)
     screen.fill(BOARD_BACKGROUND_COLOR)
     snake = Snake()
-    apple = Apple(snake.get_snake_positions())
+    apple = Apple(snake.positions)
+    game = Game()
 
     while True:
         clock.tick(SPEED)
 
         # Тут опишите основную логику игры.
-        handle_keys(snake)
+        if handle_keys(snake):
+            game.toggle_pause()
+
+        if game.paused:
+            pygame.display.update()
+            continue
 
         snake.move()
 
         if check_snake_self_collision(snake):
-            game_score = 0
-            update_title(game_score)
+            game.reset_score()
         elif check_apple_eating(snake, apple):
-            game_score += 1
-            update_title(game_score)
+            game.add_point()
 
         apple.draw()
         snake.draw()
