@@ -14,7 +14,7 @@ pygame.init()
 # Константы для размеров поля и сетки:
 SCREEN_WIDTH: int = 640
 SCREEN_HEIGHT: int = 480
-DEFAULT_POSITION: Position = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+SCREEN_CENTER: Position = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
 GRID_SIZE: int = 20
 GRID_WIDTH: int = SCREEN_WIDTH // GRID_SIZE
@@ -44,11 +44,11 @@ DEFAULT_COLOR: RGBColor = (255, 255, 255)
 # Скорость движения змейки:
 SPEED: int = 20
 
+# Заголовок игрового окна
+WINDOW_TITLE: str = 'Snake by Mark Lee'
+
 # Настройка игрового окна:
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
-
-# Заголовок окна игрового поля:
-pygame.display.set_caption('Змейка')
 
 # Настройка времени:
 clock = pygame.time.Clock()
@@ -58,7 +58,7 @@ clock = pygame.time.Clock()
 class GameObject:
     """Базовый класс игрового объекта."""
 
-    def __init__(self, position: Position = DEFAULT_POSITION,
+    def __init__(self, position: Position = SCREEN_CENTER,
                  color: RGBColor = DEFAULT_COLOR) -> None:
         """Инициализирует игровой объект.
 
@@ -96,9 +96,9 @@ class GameObject:
 class Apple(GameObject):
     """Представляет яблоко на игровом поле."""
 
-    def __init__(self) -> None:
+    def __init__(self, positions: list[Position] | None = None) -> None:
         """Создаёт яблоко со случайной начальной позицией."""
-        super().__init__(self.randomize_position(), APPLE_COLOR)
+        super().__init__(self.randomize_position(positions), APPLE_COLOR)
 
     @staticmethod
     def randomize_position(
@@ -112,8 +112,8 @@ class Apple(GameObject):
         Returns:
             Координаты свободной позиции (x, y).
         """
-        if positions is None:
-            positions = [DEFAULT_POSITION]
+        positions = positions or [SCREEN_CENTER]
+
         while True:
             x = randint(0, GRID_WIDTH - 1) * GRID_SIZE
             y = randint(0, GRID_HEIGHT - 1) * GRID_SIZE
@@ -253,22 +253,30 @@ def handle_keys(game_object: Snake) -> None:
                 game_object.next_direction = LEFT
             elif event.key == pygame.K_RIGHT and game_object.direction != LEFT:
                 game_object.next_direction = RIGHT
+            elif event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                raise SystemExit
 
 
-def check_snake_self_collision(snake: Snake) -> None:
+def check_snake_self_collision(snake: Snake) -> bool:
     """Проверяет столкновение змейки с самой собой.
 
     При обнаружении столкновения сбрасывает состояние змейки.
 
     Args:
         snake: Экземпляр змейки для проверки.
+
+    Returns:
+        True, если голова пересекается с телом, иначе False.
     """
     if snake.collides_with_self():
         screen.fill(BOARD_BACKGROUND_COLOR)
         snake.reset()
+        return True
+    return False
 
 
-def check_apple_eating(snake: Snake, apple: Apple) -> None:
+def check_apple_eating(snake: Snake, apple: Apple) -> bool:
     """Проверяет, съела ли змейка яблоко.
 
     При совпадении позиций увеличивает длину змейки
@@ -277,10 +285,20 @@ def check_apple_eating(snake: Snake, apple: Apple) -> None:
     Args:
         snake: Экземпляр змейки.
         apple: Экземпляр яблока.
+
+    Returns:
+        True, если змейка съела яблоко, иначе False.
     """
     if snake.get_head_position() == apple.get_position():
         snake.grow()
         apple.set_new_position(snake.get_snake_positions())
+        return True
+    return False
+
+
+def update_title(score: int) -> None:
+    """Обновляет заголовок окна, показывая текущий счёт."""
+    pygame.display.set_caption(f'{WINDOW_TITLE}  |  Score: {score}')
 
 
 def main() -> None:
@@ -289,9 +307,11 @@ def main() -> None:
     Создаёт игровые объекты, обрабатывает ввод,
     обновляет состояние игры и выполняет отрисовку.
     """
+    game_score: int = 0
+    update_title(game_score)
     screen.fill(BOARD_BACKGROUND_COLOR)
     snake = Snake()
-    apple = Apple()
+    apple = Apple(snake.get_snake_positions())
 
     while True:
         clock.tick(SPEED)
@@ -301,8 +321,12 @@ def main() -> None:
 
         snake.move()
 
-        check_snake_self_collision(snake)
-        check_apple_eating(snake, apple)
+        if check_snake_self_collision(snake):
+            game_score = 0
+            update_title(game_score)
+        elif check_apple_eating(snake, apple):
+            game_score += 1
+            update_title(game_score)
 
         apple.draw()
         snake.draw()
