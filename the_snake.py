@@ -41,11 +41,20 @@ SNAKE_COLOR: RGBColor = (0, 255, 0)
 # Цвет по умолчанию
 DEFAULT_COLOR: RGBColor = (255, 255, 255)
 
+# Цвет текста
+TEXT_COLOR: RGBColor = (255, 255, 255)
+
 # Параметры экрана паузы:
 PAUSE_TEXT: str = 'ПАУЗА'
 PAUSE_FONT_SIZE: int = 96
-PAUSE_TEXT_COLOR: RGBColor = (255, 255, 255)
 PAUSE_OVERLAY_ALPHA: int = 150
+
+# Параметры экрана конца игры:
+GAME_OVER_TEXT: str = 'GAME OVER'
+GAME_OVER_FONT_SIZE: int = 96
+INFO_FONT_SIZE: int = 48
+RESTART_HINT: str = 'PRESS SPACE TO RESTART'
+LINE_OFFSET: int = 60
 
 # Скорость движения змейки:
 SPEED: int = 20
@@ -244,10 +253,43 @@ class Game:
     """Хранит состояние игры: счёт, паузу и заголовок окна."""
 
     def __init__(self) -> None:
-        """Создаёт игру с нулевым счётом и без паузы."""
+        """Создаёт игру с нулевым счётом."""
         self.score: int = 0
         self.paused: bool = False
+        self.game_over: bool = False
         self.update_title()
+
+    def end_game(self) -> None:
+        """Завершает игру и выводит итоговый экран."""
+        self.game_over = True
+        self.draw_game_over()
+
+    def restart(self) -> None:
+        """Начинает игру заново: сбрасывает счёт и очищает экран."""
+        self.game_over = False
+        self.reset_score()
+        screen.fill(BOARD_BACKGROUND_COLOR)
+
+    def draw_pause(self) -> None:
+        """Выводит по центру надпись «ПАУЗА»."""
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(PAUSE_OVERLAY_ALPHA)
+        overlay.fill(BOARD_BACKGROUND_COLOR)
+        screen.blit(overlay, (0, 0))
+
+        self.draw_centered_text(PAUSE_TEXT, PAUSE_FONT_SIZE, SCREEN_CENTER)
+
+    def draw_game_over(self) -> None:
+        """Выводит надпись GAME OVER, счёт и подсказку о перезапуске."""
+        center_x, center_y = SCREEN_CENTER
+        self.draw_centered_text(GAME_OVER_TEXT, GAME_OVER_FONT_SIZE,
+                                (center_x, center_y - LINE_OFFSET))
+
+        self.draw_centered_text(f'СЧЁТ: {self.score}', INFO_FONT_SIZE,
+                                SCREEN_CENTER)
+
+        self.draw_centered_text(RESTART_HINT, INFO_FONT_SIZE,
+                                (center_x, center_y + LINE_OFFSET))
 
     def add_point(self) -> None:
         """Увеличивает счёт на единицу."""
@@ -272,28 +314,32 @@ class Game:
             screen.fill(BOARD_BACKGROUND_COLOR)
 
     @staticmethod
-    def draw_pause() -> None:
-        """Затемняет поле и выводит по центру надпись «ПАУЗА»."""
-        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        overlay.set_alpha(PAUSE_OVERLAY_ALPHA)
-        overlay.fill(BOARD_BACKGROUND_COLOR)
-        screen.blit(overlay, (0, 0))
+    def draw_centered_text(text: str, font_size: int, center: Position,
+                           color: RGBColor = TEXT_COLOR) -> None:
+        """Выводит строку текста с центром в заданной точке.
 
-        font = pygame.font.Font(None, PAUSE_FONT_SIZE)
-        text = font.render(PAUSE_TEXT, True, PAUSE_TEXT_COLOR)
-        screen.blit(text, text.get_rect(center=SCREEN_CENTER))
+        Args:
+            text: Выводимая строка.
+            font_size: Размер шрифта.
+            center: Координаты центра текста на экране.
+            color: Цвет текста в формате RGB.
+        """
+        font = pygame.font.Font(None, font_size)
+        rendered = font.render(text, True, color)
+        screen.blit(rendered, rendered.get_rect(center=center))
 
 
-def handle_keys(game_object: Snake) -> bool:
+def handle_keys(game_object: Snake) -> tuple[bool, bool]:
     """Обрабатывает события клавиатуры и изменение направления.
 
     Args:
         game_object: Змейка, направление которой изменяется.
 
     Returns:
-        True, если в этом кадре нажата клавиша паузы, иначе False.
+        Пара флагов: нажата ли клавиша паузы и клавиша перезапуска.
     """
     pause_pressed = False
+    restart_pressed = False
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -303,6 +349,8 @@ def handle_keys(game_object: Snake) -> bool:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pause_pressed = True
+            elif event.key == pygame.K_SPACE:
+                restart_pressed = True
             elif event.key == pygame.K_UP and game_object.direction != DOWN:
                 game_object.next_direction = UP
             elif event.key == pygame.K_DOWN and game_object.direction != UP:
@@ -312,7 +360,7 @@ def handle_keys(game_object: Snake) -> bool:
             elif event.key == pygame.K_RIGHT and game_object.direction != LEFT:
                 game_object.next_direction = RIGHT
 
-    return pause_pressed
+    return pause_pressed, restart_pressed
 
 
 def check_snake_self_collision(snake: Snake) -> bool:
@@ -373,22 +421,27 @@ def main() -> None:
         clock.tick(SPEED)
 
         # Тут опишите основную логику игры.
-        if handle_keys(snake):
+        pause_pressed, restart_pressed = handle_keys(snake)
+
+        if game.game_over:
+            if restart_pressed:
+                game.restart()
+        elif pause_pressed:
             game.toggle_pause()
 
-        if game.paused:
+        if game.paused or game.game_over:
             pygame.display.update()
             continue
 
         snake.move()
 
         if check_snake_self_collision(snake):
-            game.reset_score()
-        elif check_apple_eating(snake, apple):
-            game.add_point()
-
-        apple.draw()
-        snake.draw()
+            game.end_game()
+        else:
+            if check_apple_eating(snake, apple):
+                game.add_point()
+            apple.draw()
+            snake.draw()
 
         pygame.display.update()
 
