@@ -1,6 +1,22 @@
 """Вспомогательные функции для тестов игровой логики."""
 
+from snake_game.ai import SnakeAI
+from snake_game.entities import Snake
 from snake_game.game import Command, Game
+from snake_game.geometry import Board, Cell, Direction
+
+
+class FixedAI(SnakeAI):
+    """Подставной алгоритм: всегда выбирает одно и то же направление."""
+
+    name = 'Fixed'
+
+    def __init__(self, direction: Direction) -> None:
+        self._direction = direction
+
+    def choose_direction(self, snake: Snake, target: Cell,
+                         board: Board) -> Direction:
+        return self._direction
 
 
 def feed_snake(game: Game, apples: int) -> None:

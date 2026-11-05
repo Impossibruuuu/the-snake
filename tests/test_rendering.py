@@ -1,8 +1,11 @@
 """Тесты отрисовки: проверяем реальные пиксели в окне без экрана."""
 
+import random
+
 import pygame
 import pytest
 
+from snake_game.ai import AStarAI, BFSAI
 from snake_game.game import Command, Game
 from snake_game.geometry import Board, Cell
 from snake_game.rendering import PygameRenderer
@@ -127,12 +130,36 @@ def test_game_over_shows_three_lines_of_text(
                             width=200, height=20) > 0
 
 
-def test_caption_shows_title_and_score(
+def test_caption_shows_title_score_and_ai_off(
         renderer: PygameRenderer, game: Game, settings: Settings) -> None:
     renderer.render(game)
     assert pygame.display.get_caption()[0] == (
-        f'{settings.window_title}  |  Score: 0')
+        f'{settings.window_title}  |  Score: 0  |  AI: Off')
 
     feed_snake(game, 2)
     renderer.render(game)
-    assert pygame.display.get_caption()[0].endswith('Score: 2')
+    assert pygame.display.get_caption()[0] == (
+        f'{settings.window_title}  |  Score: 2  |  AI: Off')
+
+
+def test_caption_shows_ai_type_when_ai_is_on(
+        renderer: PygameRenderer, board: Board,
+        settings: Settings) -> None:
+    ai_game = Game(board, random.Random(0), {
+        Command.USE_PLAYER: None,
+        Command.USE_BFS_AI: BFSAI(),
+        Command.USE_ASTAR_AI: AStarAI(),
+    })
+
+    ai_game.handle(Command.USE_BFS_AI)
+    renderer.render(ai_game)
+    assert pygame.display.get_caption()[0] == (
+        f'{settings.window_title}  |  Score: 0  |  AI: On (BFS)')
+
+    ai_game.handle(Command.USE_ASTAR_AI)
+    renderer.render(ai_game)
+    assert pygame.display.get_caption()[0].endswith('AI: On (A*)')
+
+    ai_game.handle(Command.USE_PLAYER)
+    renderer.render(ai_game)
+    assert pygame.display.get_caption()[0].endswith('AI: Off')

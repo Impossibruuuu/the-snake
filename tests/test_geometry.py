@@ -37,6 +37,20 @@ def test_step_wraps_around_edges(cell: Cell, direction: Direction,
     assert Board(5, 4).step(cell, direction) == expected
 
 
+@pytest.mark.parametrize(('first', 'second', 'expected'), [
+    ((0, 0), (0, 0), 0),
+    ((0, 0), (2, 1), 3),
+    ((2, 1), (0, 0), 3),
+    ((0, 0), (9, 0), 1),   # короче через край поля
+    ((0, 0), (0, 9), 1),
+    ((1, 1), (9, 9), 4),
+    ((0, 0), (5, 5), 10),  # ровно половина поля по обеим осям
+])
+def test_distance_accounts_for_wrapping(first: Cell, second: Cell,
+                                        expected: int) -> None:
+    assert Board(10, 10).distance(first, second) == expected
+
+
 def test_center_of_default_board() -> None:
     assert Board(32, 24).center == (16, 12)
 

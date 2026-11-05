@@ -65,6 +65,14 @@ def test_grow_keeps_tail(board: Board) -> None:
     assert len(snake) == 2
 
 
+def test_direction_reflects_the_last_move(board: Board) -> None:
+    snake = Snake(START, Direction.RIGHT)
+    snake.steer(Direction.UP)
+    assert snake.direction is Direction.RIGHT
+    snake.move(board)
+    assert snake.direction is Direction.UP
+
+
 def test_head_is_first_cell(board: Board) -> None:
     snake = Snake(START, Direction.RIGHT)
     snake.move(board, grow=True)

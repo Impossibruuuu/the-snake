@@ -59,6 +59,20 @@ class Board:
         dx, dy = direction.value
         return (x + dx) % self.width, (y + dy) % self.height
 
+    def distance(self, first: Cell, second: Cell) -> int:
+        """Возвращает число шагов между клетками без препятствий.
+
+        Учитывает проход сквозь границы: по каждой оси выбирается
+        более короткий путь, прямой или через край поля.
+
+        Args:
+            first: Первая клетка.
+            second: Вторая клетка.
+        """
+        dx = abs(first[0] - second[0])
+        dy = abs(first[1] - second[1])
+        return min(dx, self.width - dx) + min(dy, self.height - dy)
+
     def free_cells(self, occupied: Iterable[Cell]) -> list[Cell]:
         """Возвращает все клетки поля, кроме занятых.
 

@@ -5,8 +5,21 @@ import random
 import pytest
 
 from snake_game.game import Command, Game, GameState
-from snake_game.geometry import Board, Cell
-from tests.helpers import crash_into_itself, feed_snake
+from snake_game.geometry import Board, Cell, Direction
+from tests.helpers import FixedAI, crash_into_itself, feed_snake
+
+
+@pytest.fixture
+def ai_game(board: Board) -> Game:
+    """Игра с режимами: игрок, «всегда вверх» и «всегда вниз»."""
+    controllers = {
+        Command.USE_PLAYER: None,
+        Command.USE_GREEDY_AI: FixedAI(Direction.UP),
+        Command.USE_BFS_AI: FixedAI(Direction.DOWN),
+    }
+    game = Game(board, random.Random(0), controllers)
+    game.apple.cell = (0, 0)
+    return game
 
 
 @pytest.mark.parametrize('seed', range(20))
@@ -148,3 +161,81 @@ def test_quit_command_is_not_a_game_matter(game: Game) -> None:
     game.handle(Command.QUIT)
     assert game.state is GameState.RUNNING
     assert game.snake.head == head
+
+
+def test_player_controls_the_snake_by_default(ai_game: Game) -> None:
+    assert ai_game.ai is None
+
+
+def test_selected_ai_drives_the_snake(ai_game: Game) -> None:
+    ai_game.handle(Command.USE_GREEDY_AI)
+    assert ai_game.ai is not None
+    assert ai_game.ai.name == 'Fixed'
+    ai_game.update()
+    assert ai_game.snake.head == (5, 4)
+
+
+def test_ai_can_be_replaced_by_another_one(ai_game: Game) -> None:
+    ai_game.handle(Command.USE_GREEDY_AI)
+    ai_game.handle(Command.USE_BFS_AI)
+    ai_game.update()
+    assert ai_game.snake.head == (5, 6)
+
+
+def test_player_command_returns_manual_control(ai_game: Game) -> None:
+    ai_game.handle(Command.USE_GREEDY_AI)
+    ai_game.handle(Command.USE_PLAYER)
+    assert ai_game.ai is None
+    ai_game.update()
+    assert ai_game.snake.head == (6, 5)
+
+
+def test_arrow_keys_are_ignored_while_ai_plays(ai_game: Game) -> None:
+    ai_game.handle(Command.USE_BFS_AI)
+    ai_game.handle(Command.TURN_UP)
+    ai_game.update()
+    assert ai_game.snake.head == (5, 6)
+
+
+def test_arrow_keys_work_again_after_switching_to_player(
+        ai_game: Game) -> None:
+    ai_game.handle(Command.USE_BFS_AI)
+    ai_game.handle(Command.USE_PLAYER)
+    ai_game.handle(Command.TURN_UP)
+    ai_game.update()
+    assert ai_game.snake.head == (5, 4)
+
+
+def test_ai_choice_survives_restart(ai_game: Game) -> None:
+    crash_into_itself(ai_game)
+    ai_game.handle(Command.USE_GREEDY_AI)
+    ai_game.handle(Command.RESTART)
+    assert ai_game.state is GameState.RUNNING
+    assert ai_game.ai is not None
+
+
+def test_ai_can_be_switched_on_pause(ai_game: Game) -> None:
+    ai_game.handle(Command.TOGGLE_PAUSE)
+    ai_game.handle(Command.USE_GREEDY_AI)
+    head = ai_game.snake.head
+    ai_game.update()
+    assert ai_game.ai is not None
+    assert ai_game.snake.head == head
+
+
+def test_ai_commands_are_ignored_without_controllers(game: Game) -> None:
+    game.handle(Command.USE_BFS_AI)
+    assert game.ai is None
+
+
+def test_arrow_key_does_not_leak_through_when_ai_move_is_refused(
+        board: Board) -> None:
+    # AI просит разворот назад, змейка его игнорирует. Нажатая в этот
+    # момент стрелка не должна подхватиться вместо хода AI.
+    game = Game(board, random.Random(0),
+                {Command.USE_BFS_AI: FixedAI(Direction.LEFT)})
+    game.apple.cell = (0, 0)
+    game.handle(Command.USE_BFS_AI)
+    game.handle(Command.TURN_UP)
+    game.update()
+    assert game.snake.head == (6, 5)

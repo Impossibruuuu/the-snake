@@ -21,6 +21,10 @@ DEFAULT_BINDINGS: Mapping[int, Command] = {
     pygame.K_DOWN: Command.TURN_DOWN,
     pygame.K_LEFT: Command.TURN_LEFT,
     pygame.K_RIGHT: Command.TURN_RIGHT,
+    pygame.K_1: Command.USE_PLAYER,
+    pygame.K_2: Command.USE_GREEDY_AI,
+    pygame.K_3: Command.USE_BFS_AI,
+    pygame.K_4: Command.USE_ASTAR_AI,
     pygame.K_ESCAPE: Command.TOGGLE_PAUSE,
     pygame.K_SPACE: Command.RESTART,
 }

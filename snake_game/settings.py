@@ -24,6 +24,10 @@ class Texts:
     game_over: str = 'GAME OVER'
     score: str = 'СЧЁТ'
     restart_hint: str = 'PRESS SPACE TO RESTART'
+    caption_score: str = 'Score'
+    ai_label: str = 'AI'
+    ai_on: str = 'On'
+    ai_off: str = 'Off'
 
 
 @dataclass(frozen=True, slots=True)

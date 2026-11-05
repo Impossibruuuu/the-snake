@@ -62,7 +62,7 @@ class PygameRenderer:
         if overlay is not None:
             overlay(game)
 
-        self._update_caption(game.score)
+        self._update_caption(game)
         pygame.display.update()
 
     def _draw_cell(self, cell: Cell, color: RGBColor) -> None:
@@ -99,9 +99,19 @@ class PygameRenderer:
         self._draw_text(texts.restart_hint, self._info_font,
                         (center_x, center_y + offset))
 
-    def _update_caption(self, score: int) -> None:
-        """Обновляет заголовок окна, если счёт изменился."""
-        caption = f'{self._settings.window_title}  |  Score: {score}'
+    def _update_caption(self, game: Game) -> None:
+        """Обновляет заголовок окна: счёт и режим управления.
+
+        Заголовок меняется только при изменении текста.
+        """
+        texts = self._settings.texts
+        if game.ai is None:
+            ai_state = texts.ai_off
+        else:
+            ai_state = f'{texts.ai_on} ({game.ai.name})'
+        caption = (f'{self._settings.window_title}  |  '
+                   f'{texts.caption_score}: {game.score}  |  '
+                   f'{texts.ai_label}: {ai_state}')
         if caption != self._caption:
             pygame.display.set_caption(caption)
             self._caption = caption

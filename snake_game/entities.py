@@ -1,4 +1,4 @@
-"""Игровые сущности: змейка и яблоко."""
+"""Игровые сущности: змейка и яблоко. Не зависят от pygame."""
 
 import random
 from collections import deque
@@ -30,6 +30,11 @@ class Snake:
     def head(self) -> Cell:
         """Клетка головы."""
         return self._body[0]
+
+    @property
+    def direction(self) -> Direction:
+        """Направление, в котором змейка двигалась на последнем шаге."""
+        return self._direction
 
     @property
     def cells(self) -> tuple[Cell, ...]:
